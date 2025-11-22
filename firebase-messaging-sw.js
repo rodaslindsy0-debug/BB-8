@@ -2,11 +2,11 @@
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-// CONFIGURACIÓN COMPLETA (igual que en tu app)
+// CONFIGURACIÓN COMPLETA
 firebase.initializeApp({
   apiKey: "AIzaSyDH-Ii_v4nHkBv1-0exU7kvyrcK-vf0SnU",
   authDomain: "maicol-114de.firebaseapp.com",
-  projectId: "maicol-114de",  // ← ¡IMPORTANTE! Agregar esto
+  projectId: "maicol-114de",
   storageBucket: "maicol-114de.firebasestorage.app",
   messagingSenderId: "770237885252",
   appId: "1:770237885252:web:a4d98332eb4c74a4f30511",
@@ -19,12 +19,27 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log("📩 Mensaje recibido en segundo plano:", payload);
 
-  const notificationTitle = payload.notification?.title || "Alerta médica BB-8";
+  const notificationTitle = payload.notification?.title || "🚨 Alerta Médica BB-8";
   const notificationOptions = {
     body: payload.notification?.body || "El paciente tiene valores críticos que requieren atención inmediata",
     icon: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png",
-    badge: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png"
+    badge: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png",
+    requireInteraction: true,
+    actions: [
+      {
+        action: 'view',
+        title: 'Ver detalles'
+      }
+    ]
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Manejo de clics en notificaciones
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.openWindow('https://rodaslindsy0-debug.github.io/BB-8/')
+  );
 });
