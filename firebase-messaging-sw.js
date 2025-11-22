@@ -2,15 +2,9 @@
 importScripts("https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/9.6.11/firebase-messaging-compat.js");
 
-// Configuración COMPLETA de Firebase (obligatorio)
+// Configuración mínima (SOLO messagingSenderId)
 firebase.initializeApp({
-  apiKey: "AIzaSyDH-Ii_v4nHkBv1-0exU7kvyrcK-vf0SnU",
-  authDomain: "maicol-114de.firebaseapp.com",
-  projectId: "maicol-114de",
-  storageBucket: "maicol-114de.firebasestorage.app",
-  messagingSenderId: "770237885252",
-  appId: "1:770237885252:web:a4d98332eb4c74a4f30511",
-  measurementId: "G-Z8V3X8W8G1"
+  messagingSenderId: "770237885252"
 });
 
 // Inicializa messaging
@@ -22,10 +16,10 @@ messaging.onBackgroundMessage((payload) => {
 
   const notificationTitle = payload.notification?.title || "Alerta médica";
   const notificationOptions = {
-    body: payload.notification?.body || "Tienes una nueva alerta.",
-   // icon: "/BB-8/icon.png" // opcional
+    body: payload.notification?.body || "Tienes una nueva alerta."
+    // icon opcional
+    // icon: "/BB-8/icon.png"
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
-
