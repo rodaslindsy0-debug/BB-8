@@ -89,7 +89,7 @@ const db = getFirestore(app);
 
 /* ------------ LEER NÚMERO DEL CONTACTO - CORREGIDO ------------ */
 const params = new URLSearchParams(window.location.search);
-const contactNumber = params.get("contact");  // ← CAMBIO AQUÍ: "user" por "contact"
+const contactNumber = params.get("contact");  // ← CAMBIO CRÍTICO: "user" por "contact"
 
 console.log("🔗 URL completa:", window.location.href);
 console.log("📋 Todos los parámetros:", Object.fromEntries(params));
