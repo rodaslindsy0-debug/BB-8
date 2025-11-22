@@ -1,24 +1,29 @@
-// Importa Firebase dentro del service worker (compat v9)
-importScripts("https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/9.6.11/firebase-messaging-compat.js");
+// firebase-messaging-sw.js - VERSIÓN CORREGIDA
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
 
-// Configuración mínima requerida por Firebase Messaging
+// CONFIGURACIÓN COMPLETA (igual que en tu app)
 firebase.initializeApp({
-  messagingSenderId: "770237885252"  // <-- ESTA es la única obligatoria
+  apiKey: "AIzaSyDH-Ii_v4nHkBv1-0exU7kvyrcK-vf0SnU",
+  authDomain: "maicol-114de.firebaseapp.com",
+  projectId: "maicol-114de",  // ← ¡IMPORTANTE! Agregar esto
+  storageBucket: "maicol-114de.firebasestorage.app",
+  messagingSenderId: "770237885252",
+  appId: "1:770237885252:web:a4d98332eb4c74a4f30511",
+  measurementId: "G-Z8V3X8W8G1"
 });
 
-// Inicializa messaging
 const messaging = firebase.messaging();
 
-// Notificaciones cuando la app está cerrada
+// Manejo de mensajes en segundo plano
 messaging.onBackgroundMessage((payload) => {
   console.log("📩 Mensaje recibido en segundo plano:", payload);
 
-  const notificationTitle = payload.notification?.title || "Alerta médica";
+  const notificationTitle = payload.notification?.title || "Alerta médica BB-8";
   const notificationOptions = {
-    body: payload.notification?.body || "El paciente tiene valores críticos.",
-    // Si algún día pones un icono, solo lo agregas aquí:
-    // icon: "icon.png"
+    body: payload.notification?.body || "El paciente tiene valores críticos que requieren atención inmediata",
+    icon: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png",
+    badge: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png"
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
