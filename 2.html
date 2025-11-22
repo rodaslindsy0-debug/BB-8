@@ -2,19 +2,83 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BB-8 Registro Médico</title>
+<title>Permisos de Notificación</title>
 
-<!-- Favicon -->
-<link rel="icon" href="https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png" type="image/png">
+<!-- ESTILOS MODERNOS -->
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
 
-<!-- Firebase -->
+  .card {
+    background: #ffffff11;
+    backdrop-filter: blur(14px);
+    padding: 35px;
+    border-radius: 18px;
+    width: 340px;
+    text-align: center;
+    box-shadow: 0 8px 20px #00000055;
+    border: 1px solid #ffffff22;
+  }
+
+  h2 {
+    margin-top: 0;
+    font-weight: 600;
+    font-size: 22px;
+  }
+
+  p {
+    font-size: 15px;
+    color: #dbeafe;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 14px 22px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 10px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background: #2563eb;
+    transform: scale(1.03);
+  }
+
+  #status {
+    margin-top: 15px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+</style>
+
+<!-- TU SCRIPT TAL CUAL -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, orderBy, query, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// Config Firebase
+// SW
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/BB-8/firebase-messaging-sw.js")
+    .then(reg => console.log("SW registrado correctamente"))
+    .catch(err => console.error("Error registrando SW:", err));
+}
+
+// Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDH-Ii_v4nHkBv1-0exU7kvyrcK-vf0SnU",
   authDomain: "maicol-114de.firebaseapp.com",
@@ -26,396 +90,52 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
 const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
+const messaging = getMessaging(app);
 
-const loginDiv = document.getElementById('login');
-const appDiv = document.getElementById('app');
-const googleBtn = document.getElementById('googleBtn');
-const loginEmailBtn = document.getElementById('loginEmail');
-const registerBtn = document.getElementById('registerEmail');
-const logoutBtn = document.getElementById('logout');
-const userNameEl = document.getElementById('userName');
-const userEmailEl = document.getElementById('userEmail');
-const navReg = document.getElementById('navReg');
-const navHist = document.getElementById('navHist');
-const regPanel = document.getElementById('regPanel');
-const histPanel = document.getElementById('histPanel');
-const historyList = document.getElementById('historyList');
-const dateInput = document.getElementById('dateInput');
-const timeInput = document.getElementById('timeInput');
-const oxygenInput = document.getElementById('oxygenInput');
-const pulseInput = document.getElementById('pulseInput');
-const saveEntryBtn = document.getElementById('saveEntry');
-const btnNow = document.getElementById('btnNow');
-const exportBtn = document.getElementById('exportBtn');
-const clearBtn = document.getElementById('clearBtn');
+// Obtener el número
+const params = new URLSearchParams(window.location.search);
+const contactNumber = params.get("contact");
 
-let currentUser = null;
+// Solicitar permiso
+async function requestPermission() {
+  try {
+    const permission = await Notification.requestPermission();
 
-// Mensajes
-function showMessage(msg, color='red'){
-  let div = document.createElement('div');
-  div.textContent = msg;
-  div.style.position = 'fixed';
-  div.style.bottom = '20px';
-  div.style.left = '50%';
-  div.style.transform = 'translateX(-50%)';
-  div.style.background = color==='red' ? 'rgba(255,60,60,0.9)' : 'rgba(0,180,0,0.9)';
-  div.style.color = 'white';
-  div.style.padding = '12px 18px';
-  div.style.borderRadius = '8px';
-  div.style.fontWeight = '600';
-  div.style.zIndex = '9999';
-  document.body.appendChild(div);
-  setTimeout(()=> div.remove(), 5000);
-}
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: "BG68vdKU2EJRSZc4F6Mw9bZ6bzm3dwkta6V2w7l7LzXClFs3KFC_J6nWMoMSbeN0oO8DDTCIe3EEFi9dMbi0wJY"
+      });
 
-// Mostrar app / login
-function showApp(user){
-  loginDiv.style.display='none';
-  appDiv.style.display='flex';
-  userNameEl.textContent = user.displayName || user.email.split('@')[0];
-  userEmailEl.textContent = user.email;
-  currentUser = user;
-  loadHistory();
-}
-function showLogin(){
-  loginDiv.style.display='flex';
-  appDiv.style.display='none';
-  currentUser = null;
-}
+      await setDoc(doc(db, "contacts", contactNumber), {
+        fcmToken: token
+      });
 
-// Auth state
-onAuthStateChanged(auth, user => {
-  if(user) showApp(user);
-  else showLogin();
-});
+      document.getElementById("status").textContent =
+        "✅ Permiso concedido y token guardado";
 
-// Google login
-googleBtn.addEventListener('click', async ()=>{
-  try{
-    await signInWithPopup(auth, provider);
-  }catch(e){ showMessage("Error Google login: "+e.message); }
-});
+    } else {
+      document.getElementById("status").textContent = "❌ Permiso denegado";
+    }
 
-// Email login
-loginEmailBtn.addEventListener('click', async ()=>{
-  let email = document.getElementById('emailInput').value.trim();
-  const pass  = document.getElementById('passInput').value;
-
-  if(!email || !pass){ showMessage("Ingresa correo y contraseña"); return; }
-
-  const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
-  if(!emailRegex.test(email)){
-    showMessage("Correo electrónico inválido");
-    return;
-  }
-
-  email = email.toLowerCase();
-  if(!email.endsWith("@gmail.com")){
-    showMessage("Debes usar un correo Gmail válido");
-    return;
-  }
-
-  try{
-    await signInWithEmailAndPassword(auth, email, pass);
-  }catch(e){
-    if(e.code === 'auth/user-not-found') showMessage("No existe una cuenta con este correo");
-    else if(e.code === 'auth/wrong-password') showMessage("Contraseña incorrecta");
-    else showMessage("Error login: "+e.message);
-  }
-});
-
-// Email register
-registerBtn.addEventListener('click', async ()=>{
-  let firstName = document.getElementById('firstNameInput').value.trim();
-  let lastName  = document.getElementById('lastNameInput').value.trim();
-  let age       = document.getElementById('ageInput').value.trim();
-  let contact   = document.getElementById('contactInput').value.trim();
-  let email     = document.getElementById('emailInput').value.trim();
-  const pass    = document.getElementById('passInput').value;
-
-  if(!firstName || !lastName || !age || !contact || !email || !pass){
-    showMessage("Completa todos los campos");
-    return;
-  }
-
-  const emailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i;
-  if(!emailRegex.test(email)){
-    showMessage("Correo electrónico inválido");
-    return;
-  }
-
-  email = email.toLowerCase();
-  if(!email.endsWith("@gmail.com")){
-    showMessage("Debes usar un correo Gmail válido");
-    return;
-  }
-
-  try{
-    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-    const user = userCredential.user;
-
-    // Guardar datos adicionales en Firestore
-    await addDoc(collection(db,'users',user.uid,'profile'), {
-      firstName, lastName, age: parseInt(age), contact, createdAt: serverTimestamp()
-    });
-
-    showMessage("Usuario creado con éxito!", 'green');
-  }catch(e){
-    if(e.code === 'auth/email-already-in-use') showMessage("Correo ya registrado");
-    else if(e.code === 'auth/weak-password') showMessage("Contraseña demasiado débil (mínimo 6 caracteres)");
-    else showMessage("Error registro: "+e.message);
-  }
-});
-
-// Logout
-logoutBtn.addEventListener('click', ()=> signOut(auth));
-
-// Navegación
-navReg.addEventListener('click', ()=>{ regPanel.style.display='block'; histPanel.style.display='none'; });
-navHist.addEventListener('click', ()=>{ regPanel.style.display='none'; histPanel.style.display='block'; });
-
-// Hora actual
-btnNow.addEventListener('click', ()=>{
-  const now = new Date();
-  dateInput.value = now.toISOString().slice(0,10);
-  timeInput.value = now.toTimeString().slice(0,5);
-});
-
-// Guardar registro
-saveEntryBtn.addEventListener('click', async ()=>{
-  if(!currentUser) return showMessage("Usuario no logueado");
-  const entry = {
-    date: dateInput.value,
-    time: timeInput.value,
-    oxygen: parseInt(oxygenInput.value),
-    pulse: parseInt(pulseInput.value),
-    createdAt: serverTimestamp()
-  };
-  try{
-    await addDoc(collection(db, 'users',currentUser.uid,'records'), entry);
-    dateInput.value=''; timeInput.value=''; oxygenInput.value=''; pulseInput.value='';
-    loadHistory();
-  }catch(e){ showMessage("Error al guardar: "+e.message); }
-});
-
-// Cargar historial
-async function loadHistory(){
-  if(!currentUser) return;
-  historyList.innerHTML='';
-  const q = query(collection(db,'users',currentUser.uid,'records'), orderBy('createdAt','desc'));
-  const snapshot = await getDocs(q);
-  snapshot.forEach(doc=>{
-    const d = doc.data();
-    const div = document.createElement('div');
-    div.style.borderBottom='1px solid #eee';
-    div.style.padding='6px 0';
-    div.textContent=`${d.date || '—'} ${d.time || '—'} — Oxígeno: ${d.oxygen || '—'}% | Pulso: ${d.pulse || '—'} bpm`;
-    historyList.appendChild(div);
-  });
-}
-
-// Export CSV
-exportBtn.addEventListener('click', async ()=>{
-  if(!currentUser) return;
-  const q = query(collection(db,'users',currentUser.uid,'records'), orderBy('createdAt','desc'));
-  const snapshot = await getDocs(q);
-  let csv='Fecha;Hora;Oxígeno;Pulso\n';
-  snapshot.forEach(doc=>{
-    const d = doc.data();
-    csv+=`${d.date || ''};${d.time || ''};${d.oxygen || ''};${d.pulse || ''}\n`;
-  });
-  const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'});
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'historial.csv';
-  link.click();
-});
-
-// Borrar todos
-clearBtn.addEventListener('click', async ()=>{
-  if(!currentUser) return;
-  if(!confirm("¿Borrar todos los registros?")) return;
-  const q = query(collection(db,'users',currentUser.uid,'records'));
-  const snapshot = await getDocs(q);
-  const batch = writeBatch(db);
-  snapshot.forEach(doc=> batch.delete(doc.ref));
-  await batch.commit();
-  loadHistory();
-});
-
-/* --- SISTEMA DE VOZ --- */
-function speak(text){
-  const msg = new SpeechSynthesisUtterance(text);
-  msg.lang = "es-ES";
-  speechSynthesis.speak(msg);
-}
-
-/* --- ALERTA A PANTALLA COMPLETA --- */
-const fullAlert = document.createElement("div");
-fullAlert.style.position = "fixed";
-fullAlert.style.top = "0";
-fullAlert.style.left = "0";
-fullAlert.style.width = "100vw";
-fullAlert.style.height = "100vh";
-fullAlert.style.background = "rgba(255,0,0,0.9)";
-fullAlert.style.color = "white";
-fullAlert.style.display = "flex";
-fullAlert.style.alignItems = "center";
-fullAlert.style.justifyContent = "center";
-fullAlert.style.fontSize = "38px";
-fullAlert.style.fontWeight = "900";
-fullAlert.style.zIndex = "999999";
-fullAlert.style.textAlign = "center";
-fullAlert.style.padding = "20px";
-fullAlert.style.display = "none";
-fullAlert.innerText = "ALERTA!! Niveles de oxígeno y pulso bajos";
-document.body.appendChild(fullAlert);
-
-function showFullAlert(){
-  fullAlert.style.display = "flex";
-  speak("¡ALERTA! Niveles de oxígeno y pulso extremadamente bajos");
-  setTimeout(()=> fullAlert.style.display="none", 6000);
-}
-
-/* --- VERIFICAR ALERTAS --- */
-function checkAlerts(oxygen, pulse){
-  let oxLow = oxygen < 92;
-  let pulLow = pulse < 55;
-
-  if(oxLow && pulLow){
-    showFullAlert();
-    return;
-  }
-
-  if(oxLow){
-    showMessage("⚠️ Oxígeno bajo");
-    speak("Alerta, niveles de oxígeno bajos");
-  }
-
-  if(pulLow){
-    showMessage("⚠️ LPM bajos");
-    speak("Alerta, latidos por minuto bajos");
+  } catch (e) {
+    document.getElementById("status").textContent = "❌ Error al solicitar permiso";
   }
 }
 
-/*  
-   ===========================================================================================
-   🔧 FIX: SISTEMA DE ALERTAS REPARADO (SE ROMPIA PORQUE originalSave ERA NULL)
-   ===========================================================================================
-*/
-const originalSave = saveEntryBtn.onclick;   // ← FIX AQUÍ
-
-saveEntryBtn.addEventListener("click", ()=>{  // ← FIX AQUÍ
-
-  const oxygen = parseInt(oxygenInput.value);
-  const pulse  = parseInt(pulseInput.value);
-
-  checkAlerts(oxygen, pulse); // vuelve a hablar
-
-  if(typeof originalSave === "function"){     // ← FIX AQUÍ
-    originalSave();
-  }
-});
-
+document.getElementById("btnPermission").addEventListener("click", requestPermission);
 </script>
 
-<style>
-:root{--accent:#00b33c;--muted:#6b7280;}
-html,body{height:100%;margin:0;font-family:Inter, Arial,sans-serif;}
-.bg{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;background:url('https://lumiere-a.akamaihd.net/v1/images/bb-8-main_72775463.jpeg?region=320%2C51%2C567%2C425auto=format&fit=crop&w=1600&q=80') no-repeat center center;background-size:cover;overflow:hidden;}
-.bg::before{content:"";position:absolute;inset:0;backdrop-filter:blur(8px);background:rgba(0,0,0,0.25);z-index:0;}
-#loginBox{position:relative;z-index:1;background:rgba(255,255,255,0.94);padding:28px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,0.22);display:flex;flex-direction:column;gap:12px;text-align:center;margin:20px;}
-.logo{width:76px;height:76px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#FFA500,#FF8C00);color:white;font-weight:800;font-size:20px;margin:0 auto;}
-.btn{padding:12px;border-radius:10px;border:0;width:100%;cursor:pointer;font-weight:700;}
-.google{background:#1a73e8;color:white;}
-.ghost{background:transparent;border:1px solid #e6eefc;}
-#app{display:none;min-height:100vh;width:100%;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;}
-.overlay{position:relative;z-index:1;width:100%;max-width:980px;background:rgba(255,255,255,0.92);padding:18px;border-radius:14px;display:grid;grid-template-columns:360px 1fr;gap:18px;box-shadow:0 10px 40px rgba(0,0,0,0.18);margin:0 auto;}
-.left{padding:22px;display:flex;flex-direction:column;align-items:center;gap:10px;}
-.panel{background:white;padding:14px;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,0.06);}
-@media(max-width:900px){.overlay{grid-template-columns:1fr;}.left{order:2;padding:16px;}}
-</style>
 </head>
 <body>
 
-<div class="bg" id="login">
-  <div id="loginBox">
-    <div class="logo">BB-8</div>
-    <h2>Bienvenido</h2>
-    <p style="color:var(--muted);">Ingresa para continuar o registra un usuario</p>
+<div class="card">
+  <h2>Permisos de Notificación</h2>
+  <p>Necesitamos tu permiso para enviarte alertas cuando el paciente tenga valores críticos.</p>
 
-    <!-- NUEVOS CAMPOS -->
-    <input id="firstNameInput" type="text" placeholder="Nombre" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
-    <input id="lastNameInput" type="text" placeholder="Apellido" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
-    <input id="ageInput" type="number" min="0" max="120" placeholder="Edad" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
-    <input id="contactInput" type="tel" placeholder="Número de contacto" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
+  <button id="btnPermission">Permitir Notificaciones</button>
 
-    <!-- CAMPOS EXISTENTES -->
-    <input id="emailInput" type="email" placeholder="Correo" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
-    <input id="passInput" type="password" placeholder="Contraseña" style="padding:10px;border-radius:10px;border:1px solid #ddd;width:100%;" />
-
-    <button class="btn ghost" id="loginEmail">Iniciar Sesión</button>
-    <button class="btn ghost" id="registerEmail">Crear cuenta</button>
-    <button class="btn google" id="googleBtn">Iniciar con Google</button>
-  </div>
-</div>
-
-<div class="bg" id="app">
-  <div class="overlay">
-    <div class="left">
-      <div class="logo">BB-8</div>
-      <h2>BB-8</h2>
-      <p style="color:var(--muted);">Control médico</p>
-      <b id="userName"></b>
-      <p id="userEmail" style="color:var(--muted);margin:0;"></p>
-      <button class="btn ghost" id="logout">Cerrar sesión</button>
-    </div>
-    <div class="right" style="display:flex;flex-direction:column;gap:14px;">
-      <div style="display:flex;gap:12px;">
-        <button class="btn ghost" id="navReg">Registro</button>
-        <button class="btn ghost" id="navHist">Historial</button>
-      </div>
-      <div id="regPanel" class="panel">
-        <h3>Ingresar Registro</h3>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <div style="flex:1;min-width:160px;">
-            <label style="font-size:13px;color:var(--muted);">Fecha</label>
-            <input id="dateInput" type="date" style="padding:10px;border-radius:8px;border:1px solid #e7eef6;width:100%;" />
-          </div>
-          <div style="width:140px;">
-            <label style="font-size:13px;color:var(--muted);">Hora</label>
-            <input id="timeInput" type="time" style="padding:10px;border-radius:8px;border:1px solid #e7eef6;width:100%;" />
-          </div>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
-          <div style="flex:1">
-            <label style="font-size:13px;color:var(--muted);">Oxígeno (%)</label>
-            <input id="oxygenInput" type="number" min="50" max="100" placeholder="98" style="padding:10px;border-radius:8px;border:1px solid #e7eef6;width:100%;" />
-          </div>
-          <div style="width:140px;">
-            <label style="font-size:13px;color:var(--muted);">Pulso (bpm)</label>
-            <input id="pulseInput" type="number" min="20" max="220" placeholder="72" style="padding:10px;border-radius:8px;border:1px solid #e7eef6;width:100%;" />
-          </div>
-        </div>
-        <div style="margin-top:12px;display:flex;gap:10px;">
-          <button id="saveEntry" class="btn google">Guardar registro</button>
-          <button id="btnNow" class="btn ghost">Hora actual</button>
-        </div>
-      </div>
-      <div id="histPanel" class="panel" style="display:none;">
-        <h3>Historial</h3>
-        <div id="historyList" style="max-height:380px;overflow:auto;padding-right:6px;"></div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button id="exportBtn" class="btn ghost">Exportar CSV</button>
-          <button id="clearBtn" class="btn ghost">Borrar todos</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <p id="status"></p>
 </div>
 
 </body>
