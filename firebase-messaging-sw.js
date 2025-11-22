@@ -23,8 +23,9 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification?.title || "Alerta médica";
   const notificationOptions = {
     body: payload.notification?.body || "Tienes una nueva alerta.",
-    icon: "/BB-8/icon.png" // opcional
+   // icon: "/BB-8/icon.png" // opcional
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
+
