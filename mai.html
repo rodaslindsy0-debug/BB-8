@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="es">
 <head>
@@ -79,8 +80,15 @@ function showApp(user){
   userNameEl.textContent = user.displayName || user.email.split('@')[0];
   userEmailEl.textContent = user.email;
   currentUser = user;
+  
+  // ✅ MOSTRAR LINK AUTOMÁTICAMENTE AL INICIAR SESIÓN
+  generateShareLink().then(link => {
+    document.getElementById("shareLink").value = link;
+  });
+  
   loadHistory();
 }
+
 function showLogin(){
   loginDiv.style.display='flex';
   appDiv.style.display='none';
@@ -193,7 +201,6 @@ logoutBtn.addEventListener('click', ()=> signOut(auth));
 navReg.addEventListener('click', ()=>{ 
   regPanel.style.display='block'; 
   histPanel.style.display='none'; 
-  document.getElementById("shareLink").value = generateShareLink();
 });
 navHist.addEventListener('click', ()=>{ regPanel.style.display='none'; histPanel.style.display='block'; });
 
@@ -203,6 +210,34 @@ btnNow.addEventListener('click', ()=>{
   dateInput.value = now.toISOString().slice(0,10);
   timeInput.value = now.toTimeString().slice(0,5);
 });
+
+/* --- GENERADOR AUTOMÁTICO DE LINK - CORREGIDO --- */
+async function generateShareLink(){
+  if(!currentUser) return "Inicia sesión para generar el link";
+  
+  try {
+    // Obtener el número de contacto del perfil del usuario
+    const profileQuery = query(collection(db, 'users', currentUser.uid, 'profile'));
+    const profileSnapshot = await getDocs(profileQuery);
+    
+    if (!profileSnapshot.empty) {
+      const profileData = profileSnapshot.docs[0].data();
+      const contactNumber = profileData.contact;
+      
+      if (contactNumber) {
+        // ✅ GENERAR LINK CON EL NÚMERO DE CONTACTO
+        return `https://rodaslindsy0-debug.github.io/BB-8/2.html?contact=${contactNumber}`;
+      } else {
+        return "No se encontró número de contacto";
+      }
+    } else {
+      return "No se encontró perfil del usuario";
+    }
+  } catch (error) {
+    console.error("Error obteniendo perfil:", error);
+    return "Error generando link";
+  }
+}
 
 /* --- ENVIAR NOTIFICACIONES PUSH - CORREGIDO --- */
 async function sendEmergencyNotification(oxygen, pulse) {
@@ -428,19 +463,20 @@ function showFullAlert(){
   setTimeout(()=> fullAlert.style.display="none", 6000);
 }
 
-/* --- GENERADOR AUTOMÁTICO DE LINK --- */
-function generateShareLink(){
-  if(!currentUser) return "";
-  return `https://rodaslindsy0-debug.github.io/BB-8/2.html?user=${currentUser.uid}`;
-}
-
 /* --- COPIAR LINK --- */
-document.getElementById("copyLinkBtn").addEventListener("click", ()=>{
+document.getElementById("copyLinkBtn").addEventListener("click", async ()=>{
   const input = document.getElementById("shareLink");
-  input.select();
-  input.setSelectionRange(0, 99999);
-  navigator.clipboard.writeText(input.value);
-  showMessage("Link copiado ✔️", "green");
+  const link = await generateShareLink();
+  
+  if (link.startsWith("http")) {
+    input.value = link;
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(link);
+    showMessage("Link copiado ✔️", "green");
+  } else {
+    showMessage(link, "red");
+  }
 });
 </script>
 
@@ -528,9 +564,13 @@ html,body{height:100%;margin:0;font-family:Inter, Arial,sans-serif;}
         </div>
         
         <div style="margin-top:12px;display:flex;gap:10px;align-items:center;">
-          <input id="shareLink" type="text" placeholder="Link generado..." 
+          <input id="shareLink" type="text" placeholder="Link generado automáticamente..." 
                  style="flex:1;padding:10px;border-radius:8px;border:1px solid #e7eef6;">
           <button id="copyLinkBtn" class="btn ghost">Copiar link</button>
+        </div>
+        
+        <div style="margin-top:8px;font-size:12px;color:#666;text-align:center;">
+          ⚠️ Envía este link a tu contacto de emergencia UNA SOLA VEZ
         </div>
       </div>
 
@@ -548,6 +588,7 @@ html,body{height:100%;margin:0;font-family:Inter, Arial,sans-serif;}
 
 </body>
 </html>
+
 
 
 
