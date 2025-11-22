@@ -204,15 +204,39 @@ btnNow.addEventListener('click', ()=>{
   timeInput.value = now.toTimeString().slice(0,5);
 });
 
-/* --- ENVIAR NOTIFICACIONES PUSH --- */
+/* --- ENVIAR NOTIFICACIONES PUSH - CORREGIDO --- */
 async function sendEmergencyNotification(oxygen, pulse) {
   try {
-    // 1. Obtener el token FCM del contacto desde Firestore
-    const contactRef = doc(db, "contacts", currentUser.uid);
+    console.log("🔍 Buscando perfil del usuario...");
+    
+    // 1. Obtener el número de contacto del perfil del usuario
+    const profileQuery = query(collection(db, 'users', currentUser.uid, 'profile'));
+    const profileSnapshot = await getDocs(profileQuery);
+    
+    if (profileSnapshot.empty) {
+      console.log("❌ No se encontró perfil del usuario");
+      showMessage("No se encontró información del perfil", 'red');
+      return;
+    }
+    
+    const profileData = profileSnapshot.docs[0].data();
+    const contactNumber = profileData.contact;
+    
+    if (!contactNumber) {
+      console.log("❌ No hay número de contacto registrado");
+      showMessage("No hay número de contacto registrado", 'red');
+      return;
+    }
+    
+    console.log("📞 Número de contacto encontrado:", contactNumber);
+    
+    // 2. Buscar el token FCM usando el NÚMERO de contacto (no el user ID)
+    const contactRef = doc(db, "contacts", contactNumber);
     const contactDoc = await getDoc(contactRef);
     
     if (!contactDoc.exists()) {
-      console.log("❌ No hay token FCM registrado para este contacto");
+      console.log("❌ El contacto no ha aceptado los permisos de notificación");
+      showMessage(`El contacto ${contactNumber} no ha aceptado permisos`, 'red');
       return;
     }
     
@@ -220,13 +244,14 @@ async function sendEmergencyNotification(oxygen, pulse) {
     const fcmToken = contactData.fcmToken;
     
     if (!fcmToken) {
-      console.log("❌ No hay token FCM disponible");
+      console.log("❌ No hay token FCM disponible para este contacto");
+      showMessage("Token FCM no disponible", 'red');
       return;
     }
     
     console.log("🔑 Token FCM encontrado:", fcmToken);
     
-    // 2. Enviar notificación usando Firebase Cloud Messaging
+    // 3. Enviar notificación usando Firebase Cloud Messaging
     const response = await fetch('https://fcm.googleapis.com/fcm/send', {
       method: 'POST',
       headers: {
@@ -237,27 +262,32 @@ async function sendEmergencyNotification(oxygen, pulse) {
         to: fcmToken,
         notification: {
           title: "🚨 ALERTA MÉDICA BB-8",
-          body: `Paciente con niveles críticos: Oxígeno ${oxygen}%, Pulso ${pulse} bpm`,
+          body: `Paciente ${profileData.firstName} ${profileData.lastName} tiene niveles críticos: Oxígeno ${oxygen}%, Pulso ${pulse} bpm`,
           icon: "https://upload.wikimedia.org/wikipedia/commons/3/39/BB-8_Star_Wars_icon.png",
-          click_action: "https://rodaslindsy0-debug.github.io/BB-8/"
+          click_action: "https://rodaslindsy0-debug.github.io/BB-8/",
+          requireInteraction: true
         },
         data: {
           oxygen: oxygen.toString(),
           pulse: pulse.toString(),
+          patientName: `${profileData.firstName} ${profileData.lastName}`,
           timestamp: new Date().toISOString()
         }
       })
     });
     
     if (response.ok) {
-      console.log("✅ Notificación enviada exitosamente");
-      showMessage("¡Alerta enviada al contacto!", 'green');
+      console.log("✅ Notificación enviada exitosamente a:", contactNumber);
+      showMessage(`¡Alerta enviada a ${contactNumber}!`, 'green');
     } else {
-      console.error("❌ Error enviando notificación:", await response.text());
+      const errorText = await response.text();
+      console.error("❌ Error enviando notificación:", errorText);
+      showMessage("Error enviando notificación", 'red');
     }
     
   } catch (error) {
     console.error("❌ Error en sendEmergencyNotification:", error);
+    showMessage("Error: " + error.message, 'red');
   }
 }
 
@@ -274,14 +304,14 @@ async function checkAlerts(oxygen, pulse) {
   }
 
   if(oxLow){
-    showMessage("⚠️ Oxígeno bajo");
+    showMessage("⚠️ Oxígeno bajo - Enviando alerta al contacto");
     speak("Alerta, niveles de oxígeno bajos");
     // ENVIAR NOTIFICACIÓN DE OXÍGENO BAJO
     await sendEmergencyNotification(oxygen, pulse);
   }
 
   if(pulLow){
-    showMessage("⚠️ LPM bajos");
+    showMessage("⚠️ Pulso bajo - Enviando alerta al contacto");
     speak("Alerta, latidos por minuto bajos");
     // ENVIAR NOTIFICACIÓN DE PULSO BAJO
     await sendEmergencyNotification(oxygen, pulse);
@@ -518,7 +548,6 @@ html,body{height:100%;margin:0;font-family:Inter, Arial,sans-serif;}
 
 </body>
 </html>
-
 
 
 
