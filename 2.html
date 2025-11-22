@@ -68,8 +68,7 @@
 </style>
 
 <!-- SCRIPT -->
-
-  <script type="module">
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
@@ -88,15 +87,22 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ------------ LEER NÚMERO DEL CONTACTO ------------ */
+/* ------------ LEER NÚMERO DEL CONTACTO - CORREGIDO ------------ */
 const params = new URLSearchParams(window.location.search);
-const contactNumber = params.get("user");
+const contactNumber = params.get("contact");  // ← CAMBIO AQUÍ: "user" por "contact"
 
-console.log("📞 ID de contacto recibido:", contactNumber);
+console.log("🔗 URL completa:", window.location.href);
+console.log("📋 Todos los parámetros:", Object.fromEntries(params));
+console.log("📞 Número de contacto recibido:", contactNumber);
 
 if (!contactNumber) {
-  document.getElementById("status").textContent = "❌ ERROR: No se recibió ID de contacto en el link.";
+  document.getElementById("status").textContent = "❌ ERROR: No se recibió número de contacto en el link.";
   document.getElementById("status").style.color = "#ff6b6b";
+  console.error("❌ No se encontró parámetro 'contact' en la URL");
+} else {
+  document.getElementById("status").textContent = "✅ Número recibido: " + contactNumber;
+  document.getElementById("status").style.color = "#51cf66";
+  console.log("✅ Número de contacto listo para guardar:", contactNumber);
 }
 
 /* ------------------- REGISTRAR SERVICE WORKER ------------------- */
@@ -141,7 +147,8 @@ async function registerServiceWorker() {
 /* ------------------- SOLICITAR PERMISO ------------------- */
 async function requestPermission() {
   if (!contactNumber) {
-    document.getElementById("status").textContent = "❌ No hay ID de contacto.";
+    document.getElementById("status").textContent = "❌ No hay número de contacto en el link.";
+    document.getElementById("status").style.color = "#ff6b6b";
     return;
   }
 
@@ -169,7 +176,7 @@ async function requestPermission() {
       // 4. Obtener token FCM - FORZAR a usar nuestro SW
       const token = await getToken(messaging, {
         vapidKey: "BG68vdKU2EJRSZc4F6Mw9bZ6bzm3dwkta6V2w7l7LzXClFs3KFC_J6nWMoMSbeN0oO8DDTCIe3EEFi9dMbi0wJY",
-        serviceWorkerRegistration: swRegistration // ← ¡CRÍTICO!
+        serviceWorkerRegistration: swRegistration
       });
 
       console.log("🔑 Token FCM obtenido:", token);
@@ -178,22 +185,23 @@ async function requestPermission() {
         throw new Error("No se pudo generar el token FCM");
       }
 
-      // 5. Guardar en Firestore
+      // 5. Guardar en Firestore - USANDO EL NÚMERO COMO ID
       await setDoc(doc(db, "contacts", contactNumber), {
         fcmToken: token,
-        userId: contactNumber,
+        phone: contactNumber,  // ← Guardar también el número como campo
         permissionGranted: true,
         updatedAt: new Date(),
         userAgent: navigator.userAgent
       });
 
-      document.getElementById("status").textContent = "✅ ¡Listo! Ahora recibirás alertas de emergencia.";
+      document.getElementById("status").textContent = "✅ ¡Listo! Ahora recibirás alertas de emergencia automáticamente.";
       document.getElementById("status").style.color = "#51cf66";
 
-      console.log("📋 Token guardado para usuario:", contactNumber);
+      console.log("📋 Token guardado para contacto:", contactNumber);
+      console.log("💾 Documento creado en: contacts/" + contactNumber);
 
     } else {
-      document.getElementById("status").textContent = "❌ Permiso denegado. No recibirás alertas.";
+      document.getElementById("status").textContent = "❌ Permiso denegado. No recibirás alertas de emergencia.";
       document.getElementById("status").style.color = "#ff6b6b";
     }
 
@@ -201,7 +209,7 @@ async function requestPermission() {
     console.error("❌ Error completo:", error);
     
     if (error.message.includes('service worker') || error.message.includes('404')) {
-      document.getElementById("status").textContent = "❌ Error: No se pudo cargar el Service Worker. Verifica que el archivo exista.";
+      document.getElementById("status").textContent = "❌ Error: No se pudo cargar el Service Worker.";
     } else {
       document.getElementById("status").textContent = "❌ Error: " + error.message;
     }
@@ -229,7 +237,6 @@ if ('serviceWorker' in navigator && 'Notification' in window) {
     <p id="status"></p>
   </div>
 </body>
-
 </html>
 
 
