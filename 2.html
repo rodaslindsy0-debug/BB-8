@@ -1,9 +1,10 @@
 <!doctype html>
-
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Permisos de Notificación</title><!-- ESTILOS MODERNOS --><style>
+<title>Permisos de Notificación</title>
+
+<style>
   body {
     margin: 0;
     padding: 0;
@@ -47,7 +48,7 @@
     font-weight: bold;
     border: none;
     border-radius: 10px;
-    background: #f97316; /* NARANJA */
+    background: #f97316;
     color: white;
     cursor: pointer;
     transition: 0.2s;
@@ -63,19 +64,25 @@
     font-weight: bold;
     font-size: 14px;
   }
-</style><!-- TU SCRIPT TAL CUAL --><script type="module">
+</style>
+
+<script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// SW
+// ------------------------------
+// 1️⃣ REGISTRO DEL SERVICE WORKER (CORRECTO PARA GITHUB PAGES)
+// ------------------------------  
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/BB-8/firebase-messaging-sw.js", { scope: "/BB-8/" })
+  navigator.serviceWorker.register("./firebase-messaging-sw.js")
     .then(reg => console.log("SW registrado correctamente:", reg))
     .catch(err => console.error("Error registrando SW:", err));
 }
 
-// Firebase
+// ------------------------------
+// 2️⃣ CONFIGURACIÓN DE FIREBASE
+// ------------------------------
 const firebaseConfig = {
   apiKey: "AIzaSyDH-Ii_v4nHkBv1-0exU7kvyrcK-vf0SnU",
   authDomain: "maicol-114de.firebaseapp.com",
@@ -85,15 +92,20 @@ const firebaseConfig = {
   appId: "1:770237885252:web:a4d98332eb4c74a4f30511",
   measurementId: "G-Z8V3X8W8G1"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const messaging = getMessaging(app);
 
-// Obtener el número
+// ------------------------------
+// 3️⃣ OBTENER EL NÚMERO DE CONTACTO DESDE LA URL
+// ------------------------------
 const params = new URLSearchParams(window.location.search);
 const contactNumber = params.get("contact");
 
-// Solicitar permiso
+// ------------------------------
+// 4️⃣ SOLICITAR PERMISO Y GUARDAR TOKEN
+// ------------------------------
 async function requestPermission() {
   try {
     const permission = await Notification.requestPermission();
@@ -107,26 +119,29 @@ async function requestPermission() {
         fcmToken: token
       });
 
-      document.getElementById("status").textContent =
-        "✅ Permiso concedido y token guardado";
+      document.getElementById("status").textContent = "✅ Permiso concedido y token guardado";
 
     } else {
       document.getElementById("status").textContent = "❌ Permiso denegado";
     }
 
   } catch (e) {
-    document.getElementById("status").textContent = "❌ Error al solicitar permiso";
+    document.getElementById("status").textContent = "❌ Error solicitando permiso";
+    console.error(e);
   }
 }
 
 document.getElementById("btnPermission").addEventListener("click", requestPermission);
-</script></head>
-<body><div class="card">
+</script>
+
+</head>
+<body>
+<div class="card">
   <h2>Permisos de Notificación</h2>
-  <p>Necesitamos tu permiso para enviarte alertas cuando el paciente tenga valores críticos.</p><button id="btnPermission">Permitir Notificaciones</button>
-
+  <p>Necesitamos tu permiso para enviarte alertas cuando el paciente tenga valores críticos.</p>
+  <button id="btnPermission">Permitir Notificaciones</button>
   <p id="status"></p>
-</div></body>
+</div>
+</body>
 </html>
-
 
